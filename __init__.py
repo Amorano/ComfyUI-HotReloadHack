@@ -76,23 +76,6 @@ def hash_file(file_path: str) -> str:
         logging.error(f"Error reading file {file_path}: {e}")
         return None
 
-def is_hidden_file_windows(file_path: str) -> bool:
-    """
-    Check if a given file or directory is hidden on Windows.
-
-    :param file_path: Path to the file or directory.
-    :return: True if the file or directory is hidden, False otherwise.
-    """
-    try:
-        import ctypes
-        attribute = ctypes.windll.kernel32.GetFileAttributesW(file_path)
-        if attribute == -1:
-            return False
-        return attribute & 0x2 != 0  # FILE_ATTRIBUTE_HIDDEN is 0x2
-    except Exception as e:
-        logging.error(f"Error checking if file is hidden on Windows: {e}")
-        return False
-
 def is_hidden_file(file_path: str) -> bool:
     """
     Check if a given file or any of its parent directories is hidden.
@@ -106,10 +89,15 @@ def is_hidden_file(file_path: str) -> bool:
 
     # Windows-specific hidden file check
     if sys.platform.startswith('win'):
-        while file_path and file_path != os.path.dirname(file_path):
-            if is_hidden_file_windows(file_path):
-                return True
-            file_path = os.path.dirname(file_path)
+        try:
+            import ctypes
+            attribute = ctypes.windll.kernel32.GetFileAttributesW(file_path)
+            if attribute == -1:
+                return False
+            return attribute & 0x2 != 0  # FILE_ATTRIBUTE_HIDDEN is 0x2
+        except Exception as e:
+            logging.error(f"Error checking if file is hidden on Windows: {e}")
+            return False
     else:
         # Unix-like systems check
         while file_path and file_path != os.path.dirname(file_path):
@@ -187,9 +175,9 @@ class DebouncedHotReloader(FileSystemEventHandler):
                 logging.error(f"Failed to reload module {module_name}: {e}")
                 return web.Response(text='FAILED')
 
-            module_path: str = os.path.join(CUSTOM_NODE_ROOT[0], module_name)
-            load_custom_node(module_path)
-            return web.Response(text='OK')
+        module_path: str = os.path.join(CUSTOM_NODE_ROOT[0], module_name)
+        load_custom_node(module_path)
+        return web.Response(text='OK')
 
     def on_modified(self, event):
         """Handles file modification events."""
@@ -252,10 +240,8 @@ class DebouncedHotReloader(FileSystemEventHandler):
         try:
             self.__reload(module_name)
             logging.info(f'[ComfyUI-HotReloadHack] Reloaded module {module_name}')
-        except requests.RequestException as e:
-            logging.error(f"Error calling reload for module {module_name}: {e}")
         except Exception as e:
-            logging.exception(f"[ComfyUI-HotReloadHack] {e}")
+            logging.exception(f"[ComfyUI-HotReloadHack] Error reloading module {module_name}: {e}")
 
 class HotReloaderService:
     """Service to manage the hot reloading of modules."""
@@ -266,20 +252,18 @@ class HotReloaderService:
 
         :param delay: Delay in seconds before reloading modules after detecting a change.
         """
-        self.__observer: Observer = None
+        self.__observer: Observer = Observer()
         self.__reloader: DebouncedHotReloader = DebouncedHotReloader(delay)
 
     def start(self):
         """Start observing for file changes."""
-        self.__observer = Observer()
         self.__observer.schedule(self.__reloader, CUSTOM_NODE_ROOT[0], recursive=True)
         self.__observer.start()
 
     def stop(self):
         """Stop observing for file changes."""
-        if self.__observer:
-            self.__observer.stop()
-            self.__observer.join()
+        self.__observer.stop()
+        self.__observer.join()
 
 # ==============================================================================
 # === MONKEY PATCHING ===

@@ -41,7 +41,7 @@ comma separated list of extensions. The default is to reload on `.py, .json or .
 
 `HOTRELOAD_DEBOUNCE_TIME`
 
-float value for the number of seconds the event should be reset if multiple reloads are requested. The minimum ofr this value is 1 second.
+float value for the number of seconds the event should be reset if multiple reloads are requested. The minimum for this value is 1 second.
 
 ## Examples
 
