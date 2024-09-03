@@ -1,4 +1,11 @@
 """
+@title: ComfyUI-HotReloadHack
+@author: logtd
+@category: Utility
+@reference: https://github.com/logtd/ComfyUI-HotReloadHack
+@tags: developer, reload, refresh, code, code work, engineering, python, module
+@description: Hot reloading for custom node developers.
+@version: 1.0.0
 """
 
 import os
@@ -40,9 +47,16 @@ HOTRELOAD_EXTENSIONS: set[str] = set(x.strip() for x in os.getenv("HOTRELOAD_EXT
 
 # Time to wait before reloading after detecting a file change, default is 1.0 second.
 try:
-    DEBOUNCE_TIME: float = float(os.getenv("HOTRELOAD_DEBOUNCE_TIME", 1.0))
+    HOTRELOAD_DEBOUNCE_TIME: float = float(os.getenv("HOTRELOAD_DEBOUNCE_TIME", 1.0))
 except ValueError:
-    DEBOUNCE_TIME = 1.0
+    HOTRELOAD_DEBOUNCE_TIME = 1.0
+HOTRELOAD_DEBOUNCE_TIME = max(1.0, HOTRELOAD_DEBOUNCE_TIME)
+
+NODE_CLASS_MAPPINGS = {}
+NODE_DISPLAY_NAME_MAPPINGS = {}
+WEB_DIRECTORY = "./web"
+
+__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]
 
 # ==============================================================================
 # === SUPPORT FUNCTIONS ===
@@ -309,16 +323,17 @@ def monkeypatch():
 
     caching.HierarchicalCache.set_prompt = set_prompt
 
+# ==============================================================================
+# === INITIALIZATION ===
+# ==============================================================================
+
 def setup():
     """Sets up the hot reload system."""
     logging.info("[ComfyUI-HotReloadHack] Monkey patching comfy_execution.caching.BasicCache")
     monkeypatch()
     logging.info("[ComfyUI-HotReloadHack] Starting Hot Reloader")
-    hot_reloader_service = HotReloaderService(delay=DEBOUNCE_TIME)
+    hot_reloader_service = HotReloaderService(delay=HOTRELOAD_DEBOUNCE_TIME)
     atexit.register(hot_reloader_service.stop)
     hot_reloader_service.start()
 
 setup()
-
-NODE_CLASS_MAPPINGS = {}
-NODE_DISPLAY_NAME_MAPPINGS = {}

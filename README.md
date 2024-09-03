@@ -39,6 +39,10 @@ comma separated list of module names to be the exclusive list of modules to scan
 
 comma separated list of extensions. The default is to reload on `.py, .json or .yaml` file changes *only*. If you want to have it scan all extensions, use `*`.
 
+`HOTRELOAD_DEBOUNCE_TIME`
+
+float value for the number of seconds the event should be reset if multiple reloads are requested. The minimum ofr this value is 1 second.
+
 ## Examples
 
 ![example_without_hrh](https://github.com/user-attachments/assets/7f29fd52-410d-48fe-8f1a-64b6d5e122f3)

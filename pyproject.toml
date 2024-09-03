@@ -1,0 +1,16 @@
+[project]
+name = "ComfyUI-HotReloadHack"
+description = "Hot reloading for custom node developers"
+version = "1.0.0"
+license = { file = "LICENSE" }
+dependencies = [
+    "watchdog"
+]
+
+[project.urls]
+Repository = "https://github.com/logtd/ComfyUI-HotReloadHack"
+
+[tool.comfy]
+PublisherId = "logtd"
+DisplayName = "ComfyUI-HotReloadHack"
+Icon = ""
