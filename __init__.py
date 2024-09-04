@@ -35,7 +35,8 @@ RELOADED_CLASS_TYPES: dict = {}  # Stores types of classes that have been reload
 CUSTOM_NODE_ROOT: list[str] = folder_paths.folder_names_and_paths["custom_nodes"][0]  # Custom Node root directory list.
 
 # Set of modules to exclude from reloading.
-EXCLUDE_MODULES: set[str] = {'ComfyUI-Manager', 'ComfyUI-HotReloadHack'}
+EXCLUDE_STATIC: set[str] = {'ComfyUI-Manager', 'ComfyUI-HotReloadHack'}
+EXCLUDE_MODULES: set[str] = {}
 if (HOTRELOAD_EXCLUDE := os.getenv("HOTRELOAD_EXCLUDE", None)) is not None:
     EXCLUDE_MODULES.update(x for x in HOTRELOAD_EXCLUDE.split(',') if x)
 
@@ -73,7 +74,7 @@ def hash_file(file_path: str) -> str:
         with open(file_path, 'rb') as f:
             return hashlib.md5(f.read()).hexdigest()
     except Exception as e:
-        logging.error(f"Error reading file {file_path}: {e}")
+        logging.error(f"[ComfyUI-HotReloadHack] reading file {file_path}: {e}")
         return None
 
 def is_hidden_file(file_path: str) -> bool:
@@ -96,7 +97,7 @@ def is_hidden_file(file_path: str) -> bool:
                 return False
             return attribute & 0x2 != 0  # FILE_ATTRIBUTE_HIDDEN is 0x2
         except Exception as e:
-            logging.error(f"Error checking if file is hidden on Windows: {e}")
+            logging.error(f"[ComfyUI-HotReloadHack] {e}")
             return False
     else:
         # Unix-like systems check
@@ -172,7 +173,7 @@ class DebouncedHotReloader(FileSystemEventHandler):
                 for key in module.NODE_CLASS_MAPPINGS.keys():
                     RELOADED_CLASS_TYPES[key] = 3
             except Exception as e:
-                logging.error(f"Failed to reload module {module_name}: {e}")
+                logging.error(f"[ComfyUI-HotReloadHack] failed to reload module {module_name}: {e}")
                 return web.Response(text='FAILED')
 
         module_path: str = os.path.join(CUSTOM_NODE_ROOT[0], module_name)
@@ -196,14 +197,19 @@ class DebouncedHotReloader(FileSystemEventHandler):
         relative_path: str = os.path.relpath(file_path, CUSTOM_NODE_ROOT[0])
         root_dir: str = relative_path.split(os.path.sep)[0]
 
-        if HOTRELOAD_OBSERVE_ONLY and root_dir not in HOTRELOAD_OBSERVE_ONLY:
+        if root_dir in EXCLUDE_STATIC:
             return
+        elif HOTRELOAD_OBSERVE_ONLY:
+            if root_dir not in HOTRELOAD_OBSERVE_ONLY:
+                logging.warning(f"[ComfyUI-HotReloadHack] skip {root_dir} in observe only mode {HOTRELOAD_OBSERVE_ONLY}")
+                return
         elif root_dir in EXCLUDE_MODULES:
+            logging.warning(f"[ComfyUI-HotReloadHack] skip {root_dir} in exclusion list {EXCLUDE_MODULES}")
             return
 
         current_hash: str = hash_file(file_path)
         if current_hash == self.__hashes.get(file_path):
-            logging.debug(f"File {file_path} triggered event but content hasn't changed. Ignoring.")
+            logging.debug(f"[ComfyUI-HotReloadHack]  {file_path} triggered event but content hasn't changed. Ignoring.")
             return
 
         self.__hashes[file_path] = current_hash
