@@ -36,7 +36,7 @@ CUSTOM_NODE_ROOT: list[str] = folder_paths.folder_names_and_paths["custom_nodes"
 
 # Set of modules to exclude from reloading.
 EXCLUDE_STATIC: set[str] = {'ComfyUI-Manager', 'ComfyUI-HotReloadHack'}
-EXCLUDE_MODULES: set[str] = {}
+EXCLUDE_MODULES: set[str] = set()
 if (HOTRELOAD_EXCLUDE := os.getenv("HOTRELOAD_EXCLUDE", None)) is not None:
     EXCLUDE_MODULES.update(x for x in HOTRELOAD_EXCLUDE.split(',') if x)
 
